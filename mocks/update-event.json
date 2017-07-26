@@ -1,0 +1,11 @@
+{
+  "body": "{\"apiKey\":\"api key\",\"currency\":\"BTC\",\"amount\": 12 }",
+  "pathParameters": {
+    "id": "951405c0-6fc4-11e7-aaea-df995a15ab3f"
+  },
+  "requestContext": {
+    "identity": {
+      "cognitoIdentityId": "Moep"
+    }
+  }
+}

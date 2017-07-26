@@ -1,0 +1,10 @@
+{
+  "pathParameters": {
+    "id": "5fb1a1d0-6fb5-11e7-8344-19a040e53fb9"
+  },
+  "requestContext": {
+    "identity": {
+      "cognitoIdentityId": "Moep"
+    }
+  }
+}

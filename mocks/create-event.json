@@ -1,0 +1,9 @@
+{
+  "body": "{\"apiKey\":\"my api key\"}",
+  "requestContext": {
+      "identity": {
+        "cognitoIdentityId": "Moep"
+      }
+  }
+}
+
