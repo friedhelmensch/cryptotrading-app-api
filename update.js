@@ -11,9 +11,10 @@ export async function main(event, context, callback) {
     },
     // 'UpdateExpression' defines the attributes to be updated
     // 'ExpressionAttributeValues' defines the value in the update expression
-    UpdateExpression: 'SET apiKey = :apiKey, currency = :currency, amount = :amount',
+    UpdateExpression: 'SET apiKey = :apiKey, apiSecret = :apiSecret, currency = :currency, amount = :amount',
     ExpressionAttributeValues: {
       ':apiKey': data.apiKey,
+      ':apiSecret': data.apiSecret,
       ':currency': data.currency,
       ':amount': data.amount,
     },

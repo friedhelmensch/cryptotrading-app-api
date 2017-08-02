@@ -12,6 +12,7 @@ export async function main(event, context, callback) {
       userId: event.requestContext.identity.cognitoIdentityId,
       settingId: uuid.v1(),
       apiKey: data.apiKey,
+      apiSecret : data.apiSecret,
       currency: data.currency,
       amount : data.amount,
       createdAt: new Date().getTime(),
