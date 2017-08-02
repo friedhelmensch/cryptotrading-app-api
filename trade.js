@@ -4,32 +4,90 @@ export async function main(event, context, callback) {
 
     const apiKey = 'xxx';
     const apiSecret = 'yyy';
+    var kraken = new KrakenClient(apiKey, apiSecret);
+
     const factor = 1.7;
-    const signal = 5;
+    const signal = 4;
 
-    //console.log(event["XXBTZUSD"]);
-    
-    var kraken = new KrakenClient(apiKey,apiSecret);
+    const euroToInvest = 100;
+    const pair = 'XXBTZEUR';
 
-    //console.log(await kraken.api('Balance'));
+    var now = Date.now();
+    var hours = 12;
+    var history = 1000 * 60 * 60 * hours;
+    var startTime = now - history;
 
-    var pair = 'XXBTZUSD';
-    var tickerResult = await kraken.api('Ticker', { pair : pair });
+    var ohlcResult = await kraken.api('OHLC', { pair: pair, interval: 60, since: startTime });
 
-    console.log(tickerResult.result);
+    var shoulBuy = shouldBuy(ohlcResult.result[pair], pair, signal, factor);
 
-    var lastTrade = tickerResult.result.XXBTZUSD.c[0];
-    var low = tickerResult.result.XXBTZUSD.l[1];
-    var high = tickerResult.result.XXBTZUSD.h[1];
+    if (shouldBuy) {
+        var tickerResult = await kraken.api('Ticker', { pair: pair});
 
-    var lowGap = ((lastTrade/low)-1) * 100;
-    var highGap = ((low/high)-1) * 100;
+        var ask = Number(tickerResult.result[pair]['a'][0]);
+        var bid = Number(tickerResult.result[pair]['b'][0]);
 
-    var absoluteHighGap = Math.abs(highGap);
-    var spread = Math.abs(lowGap) + absoluteHighGap;
+        var order = createOrder(ask, bid, euroToInvest, pair);
 
-    var threshold = absoluteHighGap * factor;
-    
-    console.log(spread);
-    console.log(threshold);
+        //var addOrderResult = await kraken.api('AddOrder', order);
+    }
 };
+
+
+function shouldBuy(ohlc, pair, signal, factor) {
+    var closes = ohlc[4];
+    var lows = ohlc[3]
+    var highs = ohlc[2];
+
+    var close = closes[closes.length - 1];
+    var low = lows[lows.length - 1];
+    var high = highs[highs.length - 1];
+
+    var low_gap = ((close / low) - 1) * 100;
+    var high_gap = ((close / high) - 1) * 100;
+    var spread = Math.abs(low_gap) + Math.abs(high_gap);
+
+    if (spread > signal) {
+        var high = Math.abs(high_gap) * factor;
+        if (high > spread) {
+            console.log(high);
+            console.log(spread);
+            console.log("buy");
+            return true;
+        }
+        console.log(high);
+        console.log(spread);
+        console.log("no buy inner");
+        return false;
+    }
+    else {
+        console.log("no buy outer");
+        return false;
+    }
+}
+
+function createOrder(ask, bid, euro, pair) {
+    var limit = (ask + bid) / 2;
+    var expire = new Date().getTime() + (30 * 60 * 1000); // 30 minutes
+    var volume = euro / limit;
+
+    console.log(limit);
+
+    var order = {
+        trading_agreement: 'agree',
+        pair: pair,
+        type: 'buy',
+        ordertype: 'limit',
+        price: limit,
+        volume: volume,
+        expiretm: expire,
+        oflags: 'fciq',
+        close: {
+            ordertype: 'take-profit-limit',
+            oflags: 'fcib',
+            price: '#3%',
+            price2: '#0.1%'
+        }
+    };
+    return order
+}
