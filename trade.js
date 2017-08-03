@@ -1,40 +1,82 @@
 import KrakenClient from 'kraken-api';
+import * as dynamoDbLib from './libs/dynamodb-lib';
+import { success, failure } from './libs/response-lib';
 
 export async function main(event, context, callback) {
 
-    const apiKey = 'xxx';
-    const apiSecret = 'yyy';
-    var kraken = new KrakenClient(apiKey, apiSecret);
+    const params = {
+        TableName: 'settings'
+    };
+
+    try {
+        const result = await dynamoDbLib.call('scan', params);
+        var settings = result.Items;
+
+        for (var i = 0, len = settings.length; i < len; i++) {
+            var setting = settings[i];
+            try {
+                var apiKey = setting.apiKey;
+                var apiSecret = setting.apiSecret;
+                var euroToInvest = setting.amount;
+                var pair = setting.currency;
+
+                var kraken = new KrakenClient(apiKey, apiSecret);
+                await doTheTrading(kraken, pair, euroToInvest);
+
+            } catch (e) {
+                console.error("trading went wrong: " + e);
+                console.error(e);
+            }
+        }
+        callback(null, success(true));
+    }
+    catch (e) {
+        callback(null, failure({ status: false }));
+    }
+};
+
+async function doTheTrading(kraken, pair, euroToInvest) {
 
     const factor = 1.7;
     const signal = 4;
-
-    const euroToInvest = 100;
-    const pair = 'XXBTZEUR';
+    const euroLimit = 480;
 
     var now = Date.now();
     var hours = 12;
     var history = 1000 * 60 * 60 * hours;
     var startTime = now - history;
 
+    var balanceResult = await kraken.api('Balance');
+    var hasEnoughMoney = checkSufficientBalance(balanceResult, euroLimit);
+    if (!hasEnoughMoney){
+        console.log("not enough money");
+        return;
+    }
+
     var ohlcResult = await kraken.api('OHLC', { pair: pair, interval: 60, since: startTime });
+    var placeOrder = shouldPlaceOrder(ohlcResult.result[pair], pair, signal, factor);
 
-    var shoulBuy = shouldBuy(ohlcResult.result[pair], pair, signal, factor);
-
-    if (shouldBuy) {
-        var tickerResult = await kraken.api('Ticker', { pair: pair});
+    if (placeOrder) {
+        var tickerResult = await kraken.api('Ticker', { pair: pair });
 
         var ask = Number(tickerResult.result[pair]['a'][0]);
         var bid = Number(tickerResult.result[pair]['b'][0]);
 
         var order = createOrder(ask, bid, euroToInvest, pair);
-
-        //var addOrderResult = await kraken.api('AddOrder', order);
+        var addOrderResult = await kraken.api('AddOrder', order);
+        return addOrderResult;
     }
-};
+    else{
+        console.log("do not place order")
+    }
+}
 
+function checkSufficientBalance(result, euroLimit) {
+    var euroInAccount = result.result['ZEUR'];
+    return euroInAccount > euroLimit;
+}
 
-function shouldBuy(ohlc, pair, signal, factor) {
+function shouldPlaceOrder(ohlc, pair, signal, factor) {
     var closes = ohlc[4];
     var lows = ohlc[3]
     var highs = ohlc[2];
@@ -71,7 +113,9 @@ function createOrder(ask, bid, euro, pair) {
     var expire = new Date().getTime() + (30 * 60 * 1000); // 30 minutes
     var volume = euro / limit;
 
+    console.log(euro);
     console.log(limit);
+    console.log(volume);
 
     var order = {
         trading_agreement: 'agree',
