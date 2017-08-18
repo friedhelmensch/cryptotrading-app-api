@@ -79,3 +79,7 @@ functions:
           private: true
   trade:
     handler: trade.main
+    events:
+      - schedule:
+          rate: rate(4 hours)
+          enabled: true

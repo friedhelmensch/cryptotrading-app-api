@@ -25,7 +25,6 @@ export async function main(event, context, callback) {
 
             } catch (e) {
                 console.error("trading went wrong: " + e);
-                console.error(e);
             }
         }
         callback(null, success(true));
@@ -39,7 +38,7 @@ async function doTheTrading(kraken, pair, euroToInvest) {
 
     const factor = 1.7;
     const signal = 4;
-    const euroLimit = 480;
+    const euroLimit = 199;
 
     var now = Date.now();
     var hours = 12;
