@@ -22,7 +22,6 @@ export async function main(event, context, callback) {
 
                 var kraken = new KrakenClient(apiKey, apiSecret);
                 await doTheTrading(kraken, pair, euroToInvest);
-
             } catch (e) {
                 console.error("trading went wrong: " + e);
             }
@@ -65,9 +64,6 @@ async function doTheTrading(kraken, pair, euroToInvest) {
         var addOrderResult = await kraken.api('AddOrder', order);
         console.log("order placed: " + order)
         return addOrderResult;
-    }
-    else{
-        console.log("do not place order")
     }
 }
 
