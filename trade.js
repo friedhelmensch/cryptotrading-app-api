@@ -63,6 +63,7 @@ async function doTheTrading(kraken, pair, euroToInvest) {
 
         var order = createOrder(ask, bid, euroToInvest, pair);
         var addOrderResult = await kraken.api('AddOrder', order);
+        console.log("order placed: " + order)
         return addOrderResult;
     }
     else{
@@ -91,18 +92,14 @@ function shouldPlaceOrder(ohlc, pair, signal, factor) {
     if (spread > signal) {
         var high = Math.abs(high_gap) * factor;
         if (high > spread) {
-            console.log(high);
-            console.log(spread);
-            console.log("buy");
+            console.log("buy: " + pair + " high: " + high + " spread: " + spread);
             return true;
         }
-        console.log(high);
-        console.log(spread);
-        console.log("no buy inner");
+        console.log("no buy spread larger than high: " + pair + " high: " + high + " spread: " + spread);
         return false;
     }
     else {
-        console.log("no buy outer");
+        console.log("no buy signal larger than spread: " + pair + " high: " + high + " spread: " + spread);
         return false;
     }
 }
@@ -111,10 +108,6 @@ function createOrder(ask, bid, euro, pair) {
     var limit = (ask + bid) / 2;
     var expire = new Date().getTime() + (30 * 60 * 1000); // 30 minutes
     var volume = euro / limit;
-
-    console.log(euro);
-    console.log(limit);
-    console.log(volume);
 
     var order = {
         trading_agreement: 'agree',
