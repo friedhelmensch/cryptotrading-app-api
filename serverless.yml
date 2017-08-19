@@ -82,4 +82,5 @@ functions:
     events:
       - schedule:
           rate: rate(4 hours)
-          enabled: false
+          enabled: true
+    timeout: 45

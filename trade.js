@@ -1,4 +1,4 @@
-import KrakenClient from 'kraken-api';
+import KrakenClient from './libs/kraken-lib';
 import * as dynamoDbLib from './libs/dynamodb-lib';
 import { success, failure } from './libs/response-lib';
 
