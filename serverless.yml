@@ -83,4 +83,4 @@ functions:
       - schedule:
           rate: rate(4 hours)
           enabled: true
-    timeout: 45
+    timeout: 120

@@ -2,7 +2,24 @@ import KrakenClient from './libs/kraken-lib';
 import * as dynamoDbLib from './libs/dynamodb-lib';
 import { success, failure } from './libs/response-lib';
 
+var lastReqId;
+
 export async function main(event, context, callback) {
+
+    // We check if the lambda is being retried.
+    // If that's the case, we kill it
+    // We leverage lambda's quirks:
+    // - lambda's node process reuse which keeps vars instanced
+    // - retried lambdas have the same request id 
+    // Hopefully Amazon will someday allow us to disable autoretries
+    // https://forums.aws.amazon.com/thread.jspa?threadID=176074
+    if (lastReqId == context.awsRequestId) {
+        console.log('Lambda auto retry detected. Aborting.');
+        callback(null, success(true));
+        return context.succeed();
+    } else {
+        lastReqId = context.awsRequestId;
+    };
 
     const params = {
         TableName: 'settings'
@@ -46,7 +63,7 @@ async function doTheTrading(kraken, pair, euroToInvest) {
 
     var balanceResult = await kraken.api('Balance');
     var hasEnoughMoney = checkSufficientBalance(balanceResult, euroLimit);
-    if (!hasEnoughMoney){
+    if (!hasEnoughMoney) {
         console.log("not enough money");
         return;
     }
@@ -62,8 +79,11 @@ async function doTheTrading(kraken, pair, euroToInvest) {
 
         var order = createOrder(ask, bid, euroToInvest, pair);
         var addOrderResult = await kraken.api('AddOrder', order);
-        console.log("order placed: " + order)
+        console.log("order placed. buy: " + pair + "for: " + euroToInvest + " EUR")
         return addOrderResult;
+    }
+    else{
+        console.log("Conditions not met. Order NOT placed for: " + pair)
     }
 }
 
@@ -88,16 +108,10 @@ function shouldPlaceOrder(ohlc, pair, signal, factor) {
     if (spread > signal) {
         var high = Math.abs(high_gap) * factor;
         if (high > spread) {
-            console.log("buy: " + pair + " high: " + high + " spread: " + spread);
             return true;
         }
-        console.log("no buy spread larger than high: " + pair + " high: " + high + " spread: " + spread);
-        return false;
     }
-    else {
-        console.log("no buy signal larger than spread: " + pair + " high: " + high + " spread: " + spread);
-        return false;
-    }
+    return false;
 }
 
 function createOrder(ask, bid, euro, pair) {
