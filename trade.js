@@ -79,7 +79,7 @@ async function doTheTrading(kraken, pair, euroToInvest) {
 
         var order = createOrder(ask, bid, euroToInvest, pair);
         var addOrderResult = await kraken.api('AddOrder', order);
-        console.log("order placed. buy: " + pair + "for: " + euroToInvest + " EUR")
+        console.log("Order placed. buy: " + pair + " for: " + euroToInvest + " EUR")
         return addOrderResult;
     }
     else{
@@ -93,13 +93,12 @@ function checkSufficientBalance(result, euroLimit) {
 }
 
 function shouldPlaceOrder(ohlc, pair, signal, factor) {
-    var closes = ohlc[4];
-    var lows = ohlc[3]
-    var highs = ohlc[2];
-
-    var close = closes[closes.length - 1];
-    var low = lows[lows.length - 1];
-    var high = highs[highs.length - 1];
+    //https://www.kraken.com/help/api
+    var latestData = ohlc[ohlc.length - 1];
+    
+    var high = latestData[2];
+    var low = latestData[3]
+    var close = latestData[4];
 
     var low_gap = ((close / low) - 1) * 100;
     var high_gap = ((close / high) - 1) * 100;
