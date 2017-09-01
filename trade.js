@@ -54,7 +54,7 @@ async function doTheTrading(kraken, pair, euroToInvest) {
 
     const factor = 1.7;
     const signal = 4;
-    const euroLimit = 199;
+    const euroLimit = 0;
 
     var now = Date.now();
     var hours = 12;
@@ -93,6 +93,7 @@ function checkSufficientBalance(result, euroLimit) {
 }
 
 function shouldPlaceOrder(ohlc, pair, signal, factor) {
+
     //https://www.kraken.com/help/api
     var latestData = ohlc[ohlc.length - 1];
     
@@ -114,7 +115,7 @@ function shouldPlaceOrder(ohlc, pair, signal, factor) {
 }
 
 function createOrder(ask, bid, euro, pair) {
-    var limit = (ask + bid) / 2;
+    var limit = ((ask + bid) / 2).toFixed(4);
     var expire = new Date().getTime() + (30 * 60 * 1000); // 30 minutes
     var volume = euro / limit;
 
@@ -128,10 +129,9 @@ function createOrder(ask, bid, euro, pair) {
         expiretm: expire,
         oflags: 'fciq',
         close: {
-            ordertype: 'take-profit-limit',
+            ordertype: 'limit',
             oflags: 'fcib',
-            price: '#3%',
-            price2: '#0.1%'
+            price: '#3%'
         }
     };
     return order
