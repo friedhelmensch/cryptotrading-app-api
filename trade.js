@@ -36,9 +36,10 @@ export async function main(event, context, callback) {
                 var apiSecret = setting.apiSecret;
                 var euroToInvest = setting.amount;
                 var pair = setting.currency;
-
+                
                 var kraken = new KrakenClient(apiKey, apiSecret);
                 await doTheTrading(kraken, pair, euroToInvest);
+
             } catch (e) {
                 console.error("trading went wrong: " + e);
             }
@@ -62,6 +63,7 @@ async function doTheTrading(kraken, pair, euroToInvest) {
     var startTime = now - history;
 
     var balanceResult = await kraken.api('Balance');
+    console.log("balanceResult received. " + pair);
     var hasEnoughMoney = checkSufficientBalance(balanceResult, euroLimit);
     if (!hasEnoughMoney) {
         console.log("not enough money");
@@ -69,6 +71,7 @@ async function doTheTrading(kraken, pair, euroToInvest) {
     }
 
     var ohlcResult = await kraken.api('OHLC', { pair: pair, interval: 60, since: startTime });
+    console.log("ohlcResult received. " + pair);
     var placeOrder = shouldPlaceOrder(ohlcResult.result[pair], pair, signal, factor);
 
     if (placeOrder) {
@@ -77,9 +80,14 @@ async function doTheTrading(kraken, pair, euroToInvest) {
         var ask = Number(tickerResult.result[pair]['a'][0]);
         var bid = Number(tickerResult.result[pair]['b'][0]);
 
-        var order = createOrder(ask, bid, euroToInvest, pair);
+        var assetPairs = await kraken.api('AssetPairs');
+        console.log("assetPairs received. " + pair);
+        var decimals = assetPairs.result[pair].pair_decimals;
+
+        var order = createOrder(ask, bid, euroToInvest, pair, decimals);
         var addOrderResult = await kraken.api('AddOrder', order);
         console.log("Order placed. buy: " + pair + " for: " + euroToInvest + " EUR")
+
         return addOrderResult;
     }
     else{
@@ -93,7 +101,6 @@ function checkSufficientBalance(result, euroLimit) {
 }
 
 function shouldPlaceOrder(ohlc, pair, signal, factor) {
-
     //https://www.kraken.com/help/api
     var latestData = ohlc[ohlc.length - 1];
     
@@ -114,17 +121,18 @@ function shouldPlaceOrder(ohlc, pair, signal, factor) {
     return false;
 }
 
-function createOrder(ask, bid, euro, pair) {
-    var limit = ((ask + bid) / 2).toFixed(4);
+function createOrder(ask, bid, euro, pair, decimals) {
+    //kraken has different decimal precision per pair, so we need to truncate the price accordingly
+    var price = ((ask + bid) / 2).toFixed(decimals);
     var expire = new Date().getTime() + (30 * 60 * 1000); // 30 minutes
-    var volume = euro / limit;
+    var volume = euro / price;
 
     var order = {
         trading_agreement: 'agree',
         pair: pair,
         type: 'buy',
         ordertype: 'limit',
-        price: limit,
+        price: price,
         volume: volume,
         expiretm: expire,
         oflags: 'fciq',
