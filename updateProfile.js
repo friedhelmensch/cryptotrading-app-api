@@ -4,17 +4,16 @@ import { success, failure } from './libs/response-lib';
 export async function main(event, context, callback) {
   const data = JSON.parse(event.body);
   const params = {
-    TableName: 'settings',
+    TableName: 'profiles',
     Key: {
-      userId: event.requestContext.identity.cognitoIdentityId,
-      settingId: event.pathParameters.id,
+      userId: event.requestContext.identity.cognitoIdentityId
     },
     // 'UpdateExpression' defines the attributes to be updated
     // 'ExpressionAttributeValues' defines the value in the update expression
-    UpdateExpression: 'SET currency = :currency, amount = :amount',
+    UpdateExpression: 'SET apiKey = :apiKey, apiSecret = :apiSecret',
     ExpressionAttributeValues: {
-      ':currency': data.currency,
-      ':amount': data.amount
+      ':apiKey': data.apiKey,
+      ':apiSecret': data.apiSecret
     },
     ReturnValues: 'ALL_NEW',
   };

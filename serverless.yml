@@ -84,3 +84,19 @@ functions:
           rate: rate(4 hours)
           enabled: true
     timeout: 120
+  updateProfile:
+    handler: updateProfile.main
+    events:
+      - http:
+          path: profile
+          method: put
+          cors: true
+          authorizer: aws_iam
+  getProfile:
+    handler: getProfile.main
+    events:
+      - http:
+          path: profile
+          method: get
+          cors: true
+          authorizer: aws_iam

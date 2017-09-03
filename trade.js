@@ -21,32 +21,43 @@ export async function main(event, context, callback) {
         lastReqId = context.awsRequestId;
     };
 
-    const params = {
-        TableName: 'settings'
-    };
-
     try {
-        const result = await dynamoDbLib.call('scan', params);
-        var settings = result.Items;
+        const params = { TableName: 'profiles' };
+        const profilesResult = await dynamoDbLib.call('scan', params);
+        var profiles = profilesResult.Items;
 
-        for (var i = 0, len = settings.length; i < len; i++) {
-            var setting = settings[i];
-            try {
-                var apiKey = setting.apiKey;
-                var apiSecret = setting.apiSecret;
-                var euroToInvest = setting.amount;
-                var pair = setting.currency;
-                
-                var kraken = new KrakenClient(apiKey, apiSecret);
-                await doTheTrading(kraken, pair, euroToInvest);
+        for (var i = 0, len = profiles.length; i < len; i++) {
 
-            } catch (e) {
-                console.error("trading went wrong: " + e);
+            var profile = profiles[i];
+
+            var settingsParams = {
+                TableName: "settings",
+                KeyConditionExpression: "userId = :userId",
+                ExpressionAttributeValues: { ":userId": profile.userId }
+            };
+
+            var kraken = new KrakenClient(profile.apiKey, profile.apiSecret);
+            const settingsResult = await dynamoDbLib.call('query', settingsParams);
+
+            var settings = settingsResult.Items;
+
+            for (var i = 0, len = settings.length; i < len; i++) {
+                var setting = settings[i];
+
+                try {
+                    var euroToInvest = setting.amount;
+                    var pair = setting.currency;
+                    await doTheTrading(kraken, pair, euroToInvest);
+
+                } catch (e) {
+                    console.error("trading went wrong for user: " + profile.userId + " " + e);
+                }
             }
         }
         callback(null, success(true));
     }
     catch (e) {
+        console.error("function failed: " + e);
         callback(null, failure({ status: false }));
     }
 };
@@ -90,7 +101,7 @@ async function doTheTrading(kraken, pair, euroToInvest) {
 
         return addOrderResult;
     }
-    else{
+    else {
         console.log("Conditions not met. Order NOT placed for: " + pair)
     }
 }
@@ -103,7 +114,7 @@ function checkSufficientBalance(result, euroLimit) {
 function shouldPlaceOrder(ohlc, pair, signal, factor) {
     //https://www.kraken.com/help/api
     var latestData = ohlc[ohlc.length - 1];
-    
+
     var high = latestData[2];
     var low = latestData[3]
     var close = latestData[4];
