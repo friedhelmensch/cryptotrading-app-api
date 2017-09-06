@@ -108,3 +108,11 @@ functions:
           method: delete
           cors: true
           authorizer: aws_iam
+  getOrders:
+    handler: getOrders.main
+    events:
+      - http:
+          path: orders
+          method: get
+          cors: true
+          authorizer: aws_iam
