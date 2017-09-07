@@ -81,7 +81,7 @@ functions:
     handler: trade.main
     events:
       - schedule:
-          rate: rate(4 hours)
+          rate: rate(2 hours)
           enabled: true
     timeout: 120
   updateProfile:

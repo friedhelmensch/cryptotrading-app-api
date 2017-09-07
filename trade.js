@@ -64,26 +64,31 @@ export async function main(event, context, callback) {
 
 async function doTheTrading(kraken, pair, euroToInvest) {
 
-    const factor = 1.7;
-    const signal = 4;
+    const factor = 1.6;
+    const signal = 5;
     const euroLimit = 0;
 
     var now = Date.now();
-    var hours = 12;
-    var history = 1000 * 60 * 60 * hours;
-    var startTime = now - history;
-
+    var fourHourAgo = 4 * 60 * 60 * 1000;
+    var startTime = (now - fourHourAgo) / 1000;
+    
     var balanceResult = await kraken.api('Balance');
-    console.log("balanceResult received. " + pair);
+    
     var hasEnoughMoney = checkSufficientBalance(balanceResult, euroLimit);
     if (!hasEnoughMoney) {
         console.log("not enough money");
         return;
     }
 
-    var ohlcResult = await kraken.api('OHLC', { pair: pair, interval: 60, since: startTime });
-    console.log("ohlcResult received. " + pair);
-    var placeOrder = shouldPlaceOrder(ohlcResult.result[pair], pair, signal, factor);
+    var ohlcResult = await kraken.api('OHLC', { pair: pair, interval: 240, since: startTime });
+    
+    if(ohlcResult.result[pair].length > 1) {
+        console.error(ohlcResult.result[pair].length + " candles for : " + pair);
+        return;
+    }
+
+    var candle = ohlcResult.result[pair][0];
+    var placeOrder = shouldPlaceOrder(candle, pair, signal, factor);
 
     if (placeOrder) {
         var tickerResult = await kraken.api('Ticker', { pair: pair });
@@ -92,17 +97,12 @@ async function doTheTrading(kraken, pair, euroToInvest) {
         var bid = Number(tickerResult.result[pair]['b'][0]);
 
         var assetPairs = await kraken.api('AssetPairs');
-        console.log("assetPairs received. " + pair);
         var decimals = assetPairs.result[pair].pair_decimals;
 
         var order = createOrder(ask, bid, euroToInvest, pair, decimals);
-        var addOrderResult = await kraken.api('AddOrder', order);
-        console.log("Order placed. buy: " + pair + " for: " + euroToInvest + " EUR")
-
-        return addOrderResult;
-    }
-    else {
-        console.log("Conditions not met. Order NOT placed for: " + pair)
+        console.log("Placing order: " + pair + " for: " + euroToInvest + " EUR");
+        await kraken.api('AddOrder', order);
+        console.log("Order placed. buy: " + pair + " for: " + euroToInvest + " EUR");
     }
 }
 
@@ -111,30 +111,30 @@ function checkSufficientBalance(result, euroLimit) {
     return euroInAccount > euroLimit;
 }
 
-function shouldPlaceOrder(ohlc, pair, signal, factor) {
+function shouldPlaceOrder(candle, pair, signal, factor) {
     //https://www.kraken.com/help/api
-    var latestData = ohlc[ohlc.length - 1];
 
-    var high = latestData[2];
-    var low = latestData[3]
-    var close = latestData[4];
+    var high = candle[2];
+    var low = candle[3]
+    var close = candle[4];
 
     var low_gap = ((close / low) - 1) * 100;
     var high_gap = ((close / high) - 1) * 100;
     var spread = Math.abs(low_gap) + Math.abs(high_gap);
 
     if (spread > signal) {
-        var high = Math.abs(high_gap) * factor;
-        if (high > spread) {
+        var factored_High_Gap = Math.abs(high_gap) * factor;
+        if (factored_High_Gap > spread) {
             return true;
         }
     }
+    console.log("Order NOT placed for: " + pair +  " spread " + spread.toFixed(2) + " high " + high + " low " + low + " close " + close + " low_gap " + low_gap.toFixed(2) + " high_gap " + high_gap.toFixed(2));
     return false;
 }
 
 function createOrder(ask, bid, euro, pair, decimals) {
     //kraken has different decimal precision per pair, so we need to truncate the price accordingly
-    var price = ((ask + bid) / 2).toFixed(decimals);
+    var price = (((ask + bid) / 2).toFixed(decimals)) - 10;
     var expire = new Date().getTime() + (30 * 60 * 1000); // 30 minutes
     var volume = euro / price;
 
@@ -146,10 +146,8 @@ function createOrder(ask, bid, euro, pair, decimals) {
         price: price,
         volume: volume,
         expiretm: expire,
-        oflags: 'fciq',
         close: {
             ordertype: 'limit',
-            oflags: 'fcib',
             price: '#3%'
         }
     };
