@@ -50,7 +50,7 @@ export async function main(event, context, callback) {
                     await doTheTrading(kraken, pair, euroToInvest);
 
                 } catch (e) {
-                    console.error("trading went wrong for user: " + profile.userId + " " + e);
+                    console.error("trading went wrong for: " + setting.currency + " " + e);
                 }
             }
         }
@@ -79,14 +79,14 @@ async function doTheTrading(kraken, pair, euroToInvest) {
         console.log("not enough money");
         return;
     }
-
+    
     var ohlcResult = await kraken.api('OHLC', { pair: pair, interval: 240, since: startTime });
     
     if(ohlcResult.result[pair].length > 1) {
         console.error(ohlcResult.result[pair].length + " candles for : " + pair);
         return;
     }
-
+    
     var candle = ohlcResult.result[pair][0];
     var placeOrder = shouldPlaceOrder(candle, pair, signal, factor);
 
@@ -134,8 +134,8 @@ function shouldPlaceOrder(candle, pair, signal, factor) {
 
 function createOrder(ask, bid, euro, pair, decimals) {
     //kraken has different decimal precision per pair, so we need to truncate the price accordingly
-    var price = (((ask + bid) / 2).toFixed(decimals)) - 10;
-    var expire = new Date().getTime() + (30 * 60 * 1000); // 30 minutes
+    var price = (((ask + bid) / 2).toFixed(decimals)) - 10 ;
+    var expire = ((new Date().getTime() + (0.5 * 60 * 60 * 1000)) / 1000).toFixed(0); //half hour
     var volume = euro / price;
 
     var order = {

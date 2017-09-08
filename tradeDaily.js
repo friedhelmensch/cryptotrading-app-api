@@ -90,7 +90,7 @@ async function doTheTrading(kraken, pair, euroToInvest) {
 
         console.log("Placing order: " + pair + " for: " + euroToInvest + " EUR");
         var order = createOrder(ask, bid, euroToInvest, pair, decimals);
-        var addOrderResult = await kraken.api('AddOrder', order);
+        await kraken.api('AddOrder', order);
         console.log("Order placed. buy: " + pair + " for: " + euroToInvest + " EUR")
     }
 }
