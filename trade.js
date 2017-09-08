@@ -134,7 +134,7 @@ function shouldPlaceOrder(candle, pair, signal, factor) {
 
 function createOrder(ask, bid, euro, pair, decimals) {
     //kraken has different decimal precision per pair, so we need to truncate the price accordingly
-    var price = (((ask + bid) / 2).toFixed(decimals)) - 10 ;
+    var price = (((ask + bid) / 2).toFixed(decimals));
     var expire = ((new Date().getTime() + (0.5 * 60 * 60 * 1000)) / 1000).toFixed(0); //half hour
     var volume = euro / price;
 

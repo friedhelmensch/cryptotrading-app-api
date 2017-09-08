@@ -81,6 +81,7 @@ functions:
     handler: trade.main
     events:
       - schedule:
+          name: trade-trigger
           rate: rate(1 hour)
           enabled: true
     timeout: 300
