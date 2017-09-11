@@ -1,6 +1,4 @@
-import KrakenClient from './libs/kraken-lib';
-import * as dynamoDbLib from './libs/dynamodb-lib';
-import { success, failure } from './libs/response-lib';
+import { executeForAll } from './libs/iteration-lib';
 
 var lastReqId;
 
@@ -21,45 +19,7 @@ export async function main(event, context, callback) {
         lastReqId = context.awsRequestId;
     };
 
-    try {
-        const params = { TableName: 'profiles' };
-        const profilesResult = await dynamoDbLib.call('scan', params);
-        var profiles = profilesResult.Items;
-
-        for (var i = 0, len = profiles.length; i < len; i++) {
-
-            var profile = profiles[i];
-
-            var settingsParams = {
-                TableName: "settings",
-                KeyConditionExpression: "userId = :userId",
-                ExpressionAttributeValues: { ":userId": profile.userId }
-            };
-
-            var kraken = new KrakenClient(profile.apiKey, profile.apiSecret);
-            const settingsResult = await dynamoDbLib.call('query', settingsParams);
-
-            var settings = settingsResult.Items;
-
-            for (var i = 0, len = settings.length; i < len; i++) {
-                var setting = settings[i];
-
-                try {
-                    var euroToInvest = setting.amount;
-                    var pair = setting.currency;
-                    await doTheTrading(kraken, pair, euroToInvest);
-
-                } catch (e) {
-                    console.error("trading went wrong for: " + setting.currency + " " + e);
-                }
-            }
-        }
-        callback(null, success(true));
-    }
-    catch (e) {
-        console.error("function failed: " + e);
-        callback(null, failure({ status: false }));
-    }
+    executeForAll(doTheTrading, callback);
 };
 
 async function doTheTrading(kraken, pair, euroToInvest) {
@@ -68,26 +28,25 @@ async function doTheTrading(kraken, pair, euroToInvest) {
     const signal = 5;
     const euroLimit = 0;
 
-    var now = Date.now();
-    var fourHourAgo = 4 * 60 * 60 * 1000;
-    var startTime = (now - fourHourAgo) / 1000;
-    
     var balanceResult = await kraken.api('Balance');
-    
+
     var hasEnoughMoney = checkSufficientBalance(balanceResult, euroLimit);
     if (!hasEnoughMoney) {
         console.log("not enough money");
         return;
     }
-    
-    var ohlcResult = await kraken.api('OHLC', { pair: pair, interval: 240, since: startTime });
-    
-    if(ohlcResult.result[pair].length > 1) {
-        console.error(ohlcResult.result[pair].length + " candles for : " + pair);
+
+    var now = Date.now();
+    var fourHourAgo = 4 * 60 * 60 * 1000;
+    var startTime = (now - fourHourAgo) / 1000;
+    var ohlcResponse = await kraken.api('OHLC', { pair: pair, interval: 240, since: startTime });
+
+    if (ohlcResponse.result[pair].length > 1) {
+        console.error(ohlcResponse.result[pair].length + " candles for : " + pair);
         return;
     }
     
-    var candle = ohlcResult.result[pair][0];
+    var candle = getCandle(ohlcResponse, pair);
     var placeOrder = shouldPlaceOrder(candle, pair, signal, factor);
 
     if (placeOrder) {
@@ -111,28 +70,34 @@ function checkSufficientBalance(result, euroLimit) {
     return euroInAccount > euroLimit;
 }
 
-function shouldPlaceOrder(candle, pair, signal, factor) {
-    //https://www.kraken.com/help/api
+function getCandle(response, pair)
+{
+    var result = response.result[pair][0];
+    var high = result[2] * 1;
+    var low = result[3] * 1;
+    var close = result[4] * 1;
+    // * 1 to convert string to number
+    return {high: high, low : low, close: close, pair : pair }
+}
 
-    var high = candle[2];
-    var low = candle[3]
-    var close = candle[4];
-
-    var low_gap = ((close / low) - 1) * 100;
-    var high_gap = ((close / high) - 1) * 100;
-    var spread = Math.abs(low_gap) + Math.abs(high_gap);
+function shouldPlaceOrder(candle, signal, factor)
+{
+    const low_gap = Math.abs(((candle.close / candle.low) - 1) * 100);
+    const high_gap = Math.abs(((candle.close / candle.high) - 1) * 100);
+    const spread = low_gap + high_gap;
+    const factored_high_gap = high_gap * factor;
 
     if (spread > signal) {
-        var factored_High_Gap = Math.abs(high_gap) * factor;
-        if (factored_High_Gap > spread) {
+        if (factored_high_gap > spread) {
             return true;
         }
     }
-    console.log("Order NOT placed for: " + pair +  " spread " + spread.toFixed(2) + " high " + high + " low " + low + " close " + close + " low_gap " + low_gap.toFixed(2) + " high_gap " + high_gap.toFixed(2));
+    console.log("Order NOT placed for: " + candle.pair + " spread: " + spread.toFixed(2) + " signal: " + signal + " factored_high_gap: " + factored_high_gap.toFixed(2) + " high " + candle.high.toFixed(2) + " low " + candle.low.toFixed(2) + " close " + candle.close.toFixed(2) + " low_gap " + low_gap.toFixed(2) + " high_gap " + high_gap.toFixed(2));
     return false;
 }
 
 function createOrder(ask, bid, euro, pair, decimals) {
+
     //kraken has different decimal precision per pair, so we need to truncate the price accordingly
     var price = (((ask + bid) / 2).toFixed(decimals));
     var expire = ((new Date().getTime() + (0.5 * 60 * 60 * 1000)) / 1000).toFixed(0); //half hour

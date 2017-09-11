@@ -1,11 +1,9 @@
-import KrakenClient from './libs/kraken-lib';
-import * as dynamoDbLib from './libs/dynamodb-lib';
-import { success, failure } from './libs/response-lib';
+import { executeForAll } from './libs/iteration-lib';
 
 var lastReqId;
 
 export async function main(event, context, callback) {
-
+    
     // We check if the lambda is being retried.
     // If that's the case, we kill it
     // We leverage lambda's quirks:
@@ -21,45 +19,7 @@ export async function main(event, context, callback) {
         lastReqId = context.awsRequestId;
     };
 
-    try {
-        const params = { TableName: 'profiles' };
-        const profilesResult = await dynamoDbLib.call('scan', params);
-        var profiles = profilesResult.Items;
-
-        for (var i = 0, len = profiles.length; i < len; i++) {
-
-            var profile = profiles[i];
-
-            var settingsParams = {
-                TableName: "settings",
-                KeyConditionExpression: "userId = :userId",
-                ExpressionAttributeValues: { ":userId": profile.userId }
-            };
-
-            var kraken = new KrakenClient(profile.apiKey, profile.apiSecret);
-            const settingsResult = await dynamoDbLib.call('query', settingsParams);
-
-            var settings = settingsResult.Items;
-
-            for (var i = 0, len = settings.length; i < len; i++) {
-                var setting = settings[i];
-
-                try {
-                    var euroToInvest = setting.amount;
-                    var pair = setting.currency;
-                    await doTheTrading(kraken, pair, euroToInvest);
-
-                } catch (e) {
-                    console.error("trading went wrong for user: " + profile.userId + " " + e);
-                }
-            }
-        }
-        callback(null, success(true));
-    }
-    catch (e) {
-        console.error("function failed: " + e);
-        callback(null, failure({ status: false }));
-    }
+    executeForAll(doTheTrading, callback);
 };
 
 async function doTheTrading(kraken, pair, euroToInvest) {
@@ -103,10 +63,11 @@ function checkSufficientBalance(result, euroLimit) {
 function getCandle(response, pair)
 {
     const result = response.result[pair];
+    // * 1 to convert string to number
     const high = result['h'][1] * 1;
     const low = result['l'][1] * 1;
     const close = result['c'][0] * 1;
-    // * 1 to convert string to number
+    
     return {high: high, low : low, close: close, pair : pair }
 }
 

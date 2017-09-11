@@ -82,7 +82,7 @@ functions:
     events:
       - schedule:
           name: trade-trigger
-          rate: rate(1 hour)
+          rate: rate(3 hours)
           enabled: true
     timeout: 300
   tradeDaily:
@@ -90,7 +90,7 @@ functions:
     events:
       - schedule:
           name: trade-daily-trigger
-          rate: rate(12 hours)
+          rate: rate(24 hours)
           enabled: true
     timeout: 300
   updateProfile:
