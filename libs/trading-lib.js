@@ -47,7 +47,11 @@ export async function trade(getCandle, signal, factor, euroLimit, targetProfit, 
 async function getTradeInfosFromDatabase() {
 
     var tradeInfos = [];
-    const params = { TableName: 'profiles' };
+    const params = { 
+        TableName: 'profiles',
+        FilterExpression: "active = :active",
+        ExpressionAttributeValues: { ":active": true }};
+
     const profilesResult = await dynamoDbLib.call('scan', params);
     const profiles = profilesResult.Items;
 

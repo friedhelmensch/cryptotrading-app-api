@@ -1,0 +1,8 @@
+{
+    "body": "{\"active\": false }",
+    "requestContext": {
+      "identity": {
+        "cognitoIdentityId": "Moep"
+      }
+    }
+  }
