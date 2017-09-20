@@ -99,7 +99,6 @@ function checkSufficientBalance(result, euroLimit) {
 
 function shouldPlaceOrder(candle, signal, factor) {
 
-    return true;
     const low_gap = Math.abs(((candle.close / candle.low) - 1) * 100);
     const high_gap = Math.abs(((candle.close / candle.high) - 1) * 100);
     const spread = low_gap + high_gap;
