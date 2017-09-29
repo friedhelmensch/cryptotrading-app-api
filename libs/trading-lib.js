@@ -1,7 +1,7 @@
 import KrakenClient from './kraken-lib';
 import * as dynamoDbLib from './dynamodb-lib';
 
-export async function trade(getCandle, signal, factor, euroLimit, targetProfit, expirationHours) {
+export async function trade(getCandle, signal, factor, targetProfit, expirationHours) {
 
     var tradeInfos = await getTradeInfosFromDatabase();
 
@@ -13,16 +13,7 @@ export async function trade(getCandle, signal, factor, euroLimit, targetProfit, 
 
             var orderInfo = tradeInfo.orderInfos[j];
 
-            var balanceResult = await kraken.api('Balance');
-
-            var hasEnoughMoney = checkSufficientBalance(balanceResult, euroLimit);
-            if (!hasEnoughMoney) {
-                console.log("not enough money");
-                return;
-            }
-
             var candle = await getCandle(kraken, orderInfo.pair);
-
             var placeOrder = shouldPlaceOrder(candle, signal, factor);
 
             if (placeOrder) {
@@ -90,11 +81,6 @@ async function getTradeInfosFromDatabase() {
         tradeInfos.push(tradeInfo);
     }
     return tradeInfos;
-}
-
-function checkSufficientBalance(result, euroLimit) {
-    var euroInAccount = result.result['ZEUR'];
-    return euroInAccount > euroLimit;
 }
 
 function shouldPlaceOrder(candle, signal, factor) {

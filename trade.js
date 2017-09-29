@@ -22,12 +22,11 @@ export async function main(event, context, callback) {
 
     const signal = 5; //percentage
     const factor = 1.6; //arbitrary factor
-    const euroLimit = 0; //Euro
     const targetProfit = 3; // percentage;
     const expirationHours = 0.5;
 
     try{
-        await trade(getCandle, signal, factor, euroLimit, targetProfit, expirationHours);
+        await trade(getCandle, signal, factor, targetProfit, expirationHours);
         callback(null, success(true));
     }
     catch(e)
