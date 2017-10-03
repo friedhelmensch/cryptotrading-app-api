@@ -83,7 +83,7 @@ functions:
       - schedule:
           name: trade-trigger
           rate: rate(3 hours)
-          enabled: true
+          enabled: false
     timeout: 300
   tradeDaily:
     handler: tradeDaily.main
@@ -91,7 +91,7 @@ functions:
       - schedule:
           name: trade-daily-trigger
           rate: rate(24 hours)
-          enabled: true
+          enabled: false
     timeout: 300
   updateProfile:
     handler: updateProfile.main

@@ -1,17 +1,62 @@
 import * as dynamoDbLib from './libs/dynamodb-lib';
 import { success, failure } from './libs/response-lib';
+import crypto from 'crypto';
 
 export async function main(event, context, callback) {
+
+  const tradeInfos = await getTradeInfosFromDatabase();
+  callback(null, success(tradeInfos));
+
+};
+
+async function getTradeInfosFromDatabase() {
+
+  var tradeInfos = [];
   const params = {
-    TableName: 'settings'
+    TableName: 'profiles'
   };
 
-  try {
-    const result = await dynamoDbLib.call('scan', params);
-    // Return the matching list of items in response body
-    callback(null, success(result.Items));
+  const profilesResult = await dynamoDbLib.call('scan', params);
+  const profiles = profilesResult.Items;
+
+  for (var i = 0; i < profiles.length; i++) {
+
+    var profile = profiles[i];
+
+    var settingsParams = {
+      TableName: "settings",
+      KeyConditionExpression: "userId = :userId",
+      ExpressionAttributeValues: { ":userId": profile.userId }
+    };
+
+    const settingsResult = await dynamoDbLib.call('query', settingsParams);
+
+    var settings = settingsResult.Items;
+
+    var orderInfos = [];
+
+    if (profile.active) {
+      for (var i = 0; i < settings.length; i++) {
+        var setting = settings[i];
+
+        var orderInfo = {
+          euroToInvest: setting.amount,
+          pair: setting.currency
+        }
+        orderInfos.push(orderInfo);
+      }
+    }
+
+    var hashedUserId = crypto.createHash('md5').update(profile.userId).digest("hex");
+
+    var tradeInfo = {
+      userId : hashedUserId,
+      apiKey: profile.apiKey,
+      apiSecret: profile.apiSecret,
+      orderInfos: orderInfos
+    }
+
+    tradeInfos.push(tradeInfo);
   }
-  catch(e) {
-    callback(null, failure({status: e}));
-  }
-};
+  return tradeInfos;
+}

@@ -1,25 +1,17 @@
-import * as dynamoDbLib from './libs/dynamodb-lib';
+import { getProfile } from './libs/profile-lib';
 import { success, failure } from './libs/response-lib';
 
 export async function main(event, context, callback) {
-  const params = {
-    TableName: 'profiles',
-    KeyConditionExpression: "userId = :userId",
-    ExpressionAttributeValues: {
-      ":userId": event.requestContext.identity.cognitoIdentityId,
-    }
-  };
-
+  
   try {
-    const result = await dynamoDbLib.call('query', params);
-    const profile = result.Items[0];
+    const profile = await getProfile(event.requestContext.identity.cognitoIdentityId);
+    console.log(profile);
     if (profile) {
-      
       var apiKey = null;
       var apiSecret = null;
       if (profile.apiKey && profile.apiSecret) {
-        apiKey = profile.apiKey.substring(0, 5) + "*********************";
-        apiSecret = profile.apiSecret.substring(0, 5) + "*********************"
+        apiKey = "***encrypted***";
+        apiSecret = "***encrypted***";
       }
       else {
         apiKey = "invalid";
@@ -32,6 +24,7 @@ export async function main(event, context, callback) {
         active: profile.active
       }
       callback(null, success(returnValue));
+
     } else {
       callback(null, success({}));
     }
