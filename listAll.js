@@ -2,7 +2,14 @@ import * as dynamoDbLib from './libs/dynamodb-lib';
 import { success, failure } from './libs/response-lib';
 import crypto from 'crypto';
 
+//const allowedIp = "123.123.123.123";
+
 export async function main(event, context, callback) {
+
+  /*if(event.requestContext.identity.sourceIp != allowedIp){
+    callback(null, failure("Not allowed"));
+    return;
+  }*/  
 
   const tradeInfos = await getTradeInfosFromDatabase();
   callback(null, success(tradeInfos));
@@ -29,15 +36,15 @@ async function getTradeInfosFromDatabase() {
       ExpressionAttributeValues: { ":userId": profile.userId }
     };
 
-    const settingsResult = await dynamoDbLib.call('query', settingsParams);
-
+   const settingsResult = await dynamoDbLib.call('query', settingsParams);
+    
     var settings = settingsResult.Items;
-
+    
     var orderInfos = [];
 
     if (profile.active) {
-      for (var i = 0; i < settings.length; i++) {
-        var setting = settings[i];
+      for (var j = 0; j < settings.length; j++) {
+        var setting = settings[j];
 
         var orderInfo = {
           euroToInvest: setting.amount,
@@ -55,7 +62,7 @@ async function getTradeInfosFromDatabase() {
       apiSecret: profile.apiSecret,
       orderInfos: orderInfos
     }
-
+    
     tradeInfos.push(tradeInfo);
   }
   return tradeInfos;
