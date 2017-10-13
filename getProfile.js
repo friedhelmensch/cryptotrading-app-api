@@ -5,22 +5,13 @@ export async function main(event, context, callback) {
   
   try {
     const profile = await getProfile(event.requestContext.identity.cognitoIdentityId);
-    console.log(profile);
+    
     if (profile) {
-      var apiKey = null;
-      var apiSecret = null;
-      if (profile.apiKey && profile.apiSecret) {
-        apiKey = "***encrypted***";
-        apiSecret = "***encrypted***";
-      }
-      else {
-        apiKey = "invalid";
-        apiSecret = "invalid";
-      }
-
       var returnValue = {
-        apiKey: apiKey,
-        apiSecret: apiSecret,
+        spread : profile.spread,
+        buyFactor : profile.buyFactor,
+        targetProfit : profile.targetProfit,
+        euroLimit : profile.euroLimit,
         active: profile.active
       }
       callback(null, success(returnValue));

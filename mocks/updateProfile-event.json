@@ -1,5 +1,5 @@
 {
-    "body": "{\"apiKey\":\"api key\",\"apiSecret\":\"secret\"}",
+    "body": "{\"spread\": 5, \"buyFactor\": 6, \"targetProfit\": 7, \"euroLimit\": 8, \"active\": false }",
     "requestContext": {
       "identity": {
         "cognitoIdentityId": "Moep"

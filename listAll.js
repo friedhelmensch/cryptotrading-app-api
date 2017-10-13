@@ -60,6 +60,10 @@ async function getTradeInfosFromDatabase() {
       userId : hashedUserId,
       apiKey: profile.apiKey,
       apiSecret: profile.apiSecret,
+      spread : profile.spread,
+      buyFactor : profile.buyFactor,
+      targetProfit : profile.targetProfit,
+      euroLimit : profile.euroLimit,
       orderInfos: orderInfos
     }
     

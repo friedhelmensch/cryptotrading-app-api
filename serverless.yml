@@ -101,6 +101,14 @@ functions:
           method: put
           cors: true
           authorizer: aws_iam
+  createProfile:
+    handler: createProfile.main
+    events:
+      - http:
+          path: profile
+          method: post
+          cors: true
+          authorizer: aws_iam
   getProfile:
     handler: getProfile.main
     events:
