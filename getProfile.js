@@ -17,7 +17,7 @@ export async function main(event, context, callback) {
       callback(null, success(returnValue));
 
     } else {
-      callback(null, success({}));
+      callback(null, success({noProfile : true}));
     }
 
   }
